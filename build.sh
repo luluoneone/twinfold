@@ -83,9 +83,10 @@ make_dist() {
     # ditto で固めると、署名と拡張属性が壊れない
     ditto -c -k --sequesterRsrc --keepParent "$APP" "$zip"
     cp "$MANUAL_PDF" "$MANUAL_EN_PDF" "$ROOT/dist/"
-    (cd "$ROOT/dist" && shasum -a 256 "${zip:t}" "${MANUAL_PDF:t}" "${MANUAL_EN_PDF:t}" > SHA256SUMS.txt)
+    rm -f "$ROOT/dist/SHA256SUMS.txt"
+    # チェックサムのファイルは作らない。GitHub の Releases が各ファイルの SHA-256 を表示する（2026-11-19 ナオキの判断）
     echo "dist: $zip"
-    cat "$ROOT/dist/SHA256SUMS.txt"
+    (cd "$ROOT/dist" && shasum -a 256 "${zip:t}" "${MANUAL_PDF:t}" "${MANUAL_EN_PDF:t}")
 }
 
 case "${1:-build}" in

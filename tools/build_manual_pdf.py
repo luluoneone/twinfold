@@ -204,7 +204,7 @@ def gatekeeper_lines(app: str) -> list[str]:
             "4. Click Open Anyway again in the confirmation and allow it with your password (or Touch ID).",
             "",
             "> Note: Only do this for a ZIP you downloaded yourself from the official page, never for files forwarded by someone or found elsewhere. "
-            "If the values in SHA256SUMS.txt match the ones on the download page, the files are unchanged.",
+            "To be sure, compare the SHA-256 shown next to each file on the download page (GitHub Releases) with the result of shasum -a 256 <file> in Terminal.",
             "",
             "On macOS 14 you can also right-click the app, choose Open, and click Open in the confirmation.",
         ]
@@ -226,7 +226,7 @@ def gatekeeper_lines(app: str) -> list[str]:
         "",
         "> 注意：この操作は、配布ページから自分でダウンロードしたZIPに対してだけ行ってください。"
         "人から転送されたファイルや、別のサイトにあったファイルでは行わないでください。"
-        "同梱の SHA256SUMS.txt の値が配布ページの値と同じなら、ファイルは配布時のままです。",
+        "念のため確かめたいときは、配布ページ（GitHub の Releases）で各ファイルの横に出る SHA-256 と、ターミナルで shasum -a 256 ファイル名 を実行した値を比べてください。同じなら配布時のままです。",
         "",
         "macOS 14では、アプリを右クリックして「開く」を選び、確認の画面で「開く」を押しても同じです。",
     ]
