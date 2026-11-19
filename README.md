@@ -14,6 +14,7 @@ It works by loading a small dylib into Finder. It is not a separate file manager
 
 <p align="center">
   <a href="https://github.com/luluoneone/twinfold/releases/latest"><b>⬇ Download the latest version</b></a> (free · macOS 14 or later)<br>
+  Tested on macOS 27.2.1 (Apple silicon). Not tested on Intel Macs.<br>
   Please read "Before you install" below first.
 </p>
 
@@ -66,8 +67,8 @@ Switch it from "Language" in the menu bar, or at the bottom of the Twinfold tab 
 
 | Item | Details |
 |---|---|
-| macOS | 14 or later. Tested on macOS 27.2 and 26.6.2 (Apple silicon) |
-| CPU | Apple silicon. An Intel slice is built too, but it has not been tested on an Intel Mac |
+| macOS | 14 or later. Tested on macOS 27.2.1, 27.2 and 26.6.2 (Apple silicon) |
+| CPU | Apple silicon. An Intel slice is built too, but **it has not been tested on an Intel Mac** |
 | Build | clang from the Command Line Tools (Xcode is not required) |
 
 ## Required setup
@@ -175,7 +176,7 @@ Twinfold.app (menu bar agent, arm64 / x86_64)
 
 ## Tested on real hardware
 
-macOS 27.2 (Apple silicon, November 2026):
+macOS 27.2 and 27.2.1 (Apple silicon, November 2026; 0.5.0 was checked on 27.2.1):
 - Loading: agent launch, reloading after `killall Finder`, reloading after a version change
 - Settings tab: appears to the right of Advanced; switching between it and General, Advanced and Sidebar repeatedly does not crash
 - Turn off for now: Finder returns to normal, and turning it back on reloads Twinfold

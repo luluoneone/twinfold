@@ -14,6 +14,7 @@ Finder の中に小さな dylib を読み込ませて動きます。Finder を�
 
 <p align="center">
   <a href="https://github.com/luluoneone/twinfold/releases/latest"><b>⬇ 最新版をダウンロード</b></a>（無料・macOS 14 以上）<br>
+  macOS 27.2.1（Apple シリコン）で動作確認済み。Intel の Mac では動作を確認していません。<br>
   先に下の「入れる前に」を読んでください。
 </p>
 
@@ -66,8 +67,8 @@ Finder 設定（`⌘,`）のツールバーで「詳細」の右に「Twinfold�
 
 | 項目 | 内容 |
 |---|---|
-| macOS | 14 以降。macOS 27.2 と 26.6.2（Apple silicon）で確認済み |
-| CPU | Apple silicon。Intel 用も入れてビルドしていますが、Intel Mac では試していません |
+| macOS | 14 以降。macOS 27.2.1・27.2・26.6.2（Apple silicon）で確認済み |
+| CPU | Apple silicon。Intel 用も入れてビルドしていますが、**Intel Mac では動作を確認していません** |
 | ビルド | Command Line Tools の clang（Xcode は不要） |
 
 ## 必要な設定
@@ -173,7 +174,7 @@ Twinfold.app（メニューバー常駐、arm64 / x86_64）
 
 ## 実機で確認したこと
 
-macOS 27.2（Apple silicon、2026-11）：
+macOS 27.2・27.2.1（Apple silicon、2026-11。0.5.0 は 27.2.1 で確認）：
 - 組み込み：常駐アプリの起動、`killall Finder` 後の組み込み直し、版が変わったときの組み込み直し
 - 設定タブ：「詳細」の右に出る。一般・詳細・サイドバーと繰り返し切り替えても落ちない
 - 一時的にオフ：通常の Finder に戻り、オンに戻すと再び組み込まれる
