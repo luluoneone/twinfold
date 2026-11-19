@@ -7,6 +7,15 @@
 Finder にデュアル表示・クイックウインドウ・切り取りと移動を足す、macOS 用の小さな拡張です。
 Finder の中に小さな dylib を読み込ませて動きます。Finder を置き換える別のファイラーではありません。
 
+<p align="center">
+  <a href="https://youtu.be/MJUFIkYm5ng"><img src="https://i.ytimg.com/vi/MJUFIkYm5ng/maxresdefault.jpg" width="640" alt="50秒でわかる Twinfold（YouTube）"></a><br>
+  <a href="https://youtu.be/MJUFIkYm5ng">▶ 50秒の紹介動画を見る（YouTube）</a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/luluoneone/twinfold/releases/latest"><b>⬇ 最新版をダウンロード</b></a>（無料・macOS 14 以上）<br>
+  先に下の「入れる前に」を読んでください。
+</p>
 
 ## ⚠️ 入れる前に
 
@@ -90,7 +99,7 @@ Finder 設定（`⌘,`）のツールバーで「詳細」の右に「Twinfold�
 
 ### 配布版（ZIP）
 
-1. Releases から `Twinfold-<版>.zip` をダウンロードして展開し、`Twinfold.app` を `/Applications`（または `~/Applications`）に入れます。
+1. [Releases](https://github.com/luluoneone/twinfold/releases/latest) から `Twinfold-<版>.zip` をダウンロードして展開し、`Twinfold.app` を `/Applications`（または `~/Applications`）に入れます。「Source code」は自分でビルドする人向けのソースで、アプリではありません。
 2. 公証していないので、初回は macOS に止められます。次のコマンドでダウンロードの印を外してから開きます。
    ```bash
    xattr -dr com.apple.quarantine /Applications/Twinfold.app

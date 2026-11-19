@@ -7,6 +7,16 @@
 A small macOS extension that adds a dual-pane view, a drop-down quick window and real cut-and-move to the Finder.
 It works by loading a small dylib into Finder. It is not a separate file manager that replaces Finder.
 
+<p align="center">
+  <a href="https://youtu.be/GYiVmC6sgkc"><img src="https://i.ytimg.com/vi/GYiVmC6sgkc/maxresdefault.jpg" width="640" alt="Twinfold in 50 seconds (YouTube)"></a><br>
+  <a href="https://youtu.be/GYiVmC6sgkc">▶ Watch the 50-second video (YouTube)</a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/luluoneone/twinfold/releases/latest"><b>⬇ Download the latest version</b></a> (free · macOS 14 or later)<br>
+  Please read "Before you install" below first.
+</p>
+
 ## ⚠️ Before you install
 
 Twinfold only works with part of macOS's protection turned off.
@@ -89,7 +99,7 @@ To undo them, uninstall Twinfold first, then:
 
 ### Release build (ZIP)
 
-1. Download `Twinfold-<version>.zip` from Releases, unzip it, and move `Twinfold.app` to `/Applications` (or `~/Applications`).
+1. Download `Twinfold-<version>.zip` from [Releases](https://github.com/luluoneone/twinfold/releases/latest) (not "Source code", which is the source for building it yourself), unzip it, and move `Twinfold.app` to `/Applications` (or `~/Applications`).
 2. Because it is not notarized, macOS blocks the first launch. Remove the download mark with this command, then open it.
    ```bash
    xattr -dr com.apple.quarantine /Applications/Twinfold.app
