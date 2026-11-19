@@ -47,11 +47,6 @@ static os_log_t AgentLog(void) {
     _injections = [NSMutableArray array];
     _children = [NSMutableDictionary dictionary];
 
-    // Shift を押しながら起動したら、組み込まずに起動する（Finder がおかしいときの逃げ道）
-    if (NSEvent.modifierFlags & NSEventModifierFlagShift) {
-        _stopped = YES;
-        os_log(AgentLog(), "safe mode: shift held at launch");
-    }
 
     _statusItem = [NSStatusBar.systemStatusBar statusItemWithLength:NSVariableStatusItemLength];
     NSImage *icon = [NSImage imageWithSystemSymbolName:@"rectangle.split.2x1" accessibilityDescription:@"Twinfold"];
@@ -77,6 +72,22 @@ static os_log_t AgentLog(void) {
     [wc addObserver:self selector:@selector(appTerminated:) name:NSWorkspaceDidTerminateApplicationNotification object:nil];
 
     os_log(AgentLog(), "agent %{public}@ started", TWFVersion);
+    // Shift を押しながら起動したら、組み込まずに起動する（Finder がおかしいときの逃げ道）。
+    // 文字入力中の Shift をたまたま拾わないよう、起動時と 0.6 秒後の両方で押されているときだけにする
+    if (NSEvent.modifierFlags & NSEventModifierFlagShift) {
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.6 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            if (NSEvent.modifierFlags & NSEventModifierFlagShift) {
+                self->_stopped = YES;
+                os_log(AgentLog(), "safe mode: shift held at launch");
+            }
+            [self startWork];
+        });
+        return;
+    }
+    [self startWork];
+}
+
+- (void)startWork {
     // Finder 設定の画面から、常駐アプリが起動していないときに依頼された場合
     NSArray<NSString *> *args = NSProcessInfo.processInfo.arguments;
     if ([args containsObject:@"--uninstall"]) {
@@ -179,14 +190,14 @@ static BOOL IsAppleSilicon(void) {
     NSMutableArray<NSString *> *missing = [NSMutableArray array];
     NSString *sip = RunTool(@"/usr/bin/csrutil", @[ @"status" ]);
     if ([sip containsString:@"status: enabled"]) {
-        [missing addObject:@"SIP（システム整合性保護）が有効です。復旧モードで csrutil disable が必要です。"];
+        [missing addObject:TWFText(@"SIP（システム整合性保護）が有効です。復旧モードで csrutil disable が必要です。", @"System Integrity Protection (SIP) is enabled. Run csrutil disable in Recovery mode.")];
     }
     if (IsAppleSilicon() && ![SysctlString("kern.bootargs") containsString:@"-arm64e_preview_abi"]) {
-        [missing addObject:@"boot-args に -arm64e_preview_abi がありません（sudo nvram boot-args=-arm64e_preview_abi のあと再起動）。"];
+        [missing addObject:TWFText(@"boot-args に -arm64e_preview_abi がありません（sudo nvram boot-args=-arm64e_preview_abi のあと再起動）。", @"boot-args does not include -arm64e_preview_abi (run sudo nvram boot-args=-arm64e_preview_abi, then restart).")];
     }
     NSDictionary *lv = [NSDictionary dictionaryWithContentsOfFile:@"/Library/Preferences/com.apple.security.libraryvalidation.plist"];
     if (![lv[@"DisableLibraryValidation"] boolValue]) {
-        [missing addObject:@"ライブラリ検証が有効です（sudo defaults write /Library/Preferences/com.apple.security.libraryvalidation.plist DisableLibraryValidation -bool true）。"];
+        [missing addObject:TWFText(@"ライブラリ検証が有効です（sudo defaults write /Library/Preferences/com.apple.security.libraryvalidation.plist DisableLibraryValidation -bool true）。", @"Library validation is enabled (run sudo defaults write /Library/Preferences/com.apple.security.libraryvalidation.plist DisableLibraryValidation -bool true).")];
     }
     return missing;
 }
@@ -206,13 +217,13 @@ static BOOL IsAppleSilicon(void) {
     if (![self isActive] || _injecting) return;
     NSString *dylib = [NSBundle.mainBundle pathForResource:@"TwinfoldCore" ofType:@"dylib"];
     if (!dylib || ![NSFileManager.defaultManager isReadableFileAtPath:dylib]) {
-        [self stopWithMessage:@"TwinfoldCore.dylib がアプリの中に見つかりません。build.sh で作り直してください。"];
+        [self stopWithMessage:TWFText(@"TwinfoldCore.dylib がアプリの中に見つかりません。build.sh で作り直してください。", @"TwinfoldCore.dylib is missing from the app. Rebuild it with build.sh.")];
         return;
     }
     NSArray<NSString *> *missing = [self missingRequirements];
     if (missing.count) {
         // 読み込めないと分かっているので、Finder は再起動しない
-        [self stopWithMessage:[NSString stringWithFormat:@"Finder に組み込むための macOS の設定が足りないため、何もしていません。\n\n• %@\n\n手順は README の「必要な設定」にあります。",
+        [self stopWithMessage:[NSString stringWithFormat:TWFText(@"Finder に組み込むための macOS の設定が足りないため、何もしていません。\n\n• %@\n\n手順は README の「必要な設定」にあります。", @"Twinfold did nothing because macOS is not set up to load it into Finder.\n\n• %@\n\nSee \u201cRequired setup\u201d in the README."),
                                                          [missing componentsJoinedByString:@"\n• "]]];
         return;
     }
@@ -222,8 +233,10 @@ static BOOL IsAppleSilicon(void) {
     }]];
     if (_injections.count >= kMaxInjections) {
         [self restoreNormalFinder];
-        [self stopWithMessage:@"Finder が短い間に何度も終了したため、組み込みを止めて通常の Finder に戻しました。"
-                               @"Console.app で「com.lulu.twinfold」を検索すると原因の記録があります。"];
+        [self stopWithMessage:TWFText(@"Finder が短い間に何度も終了したため、組み込みを止めて通常の Finder に戻しました。"
+                               @"Console.app で「com.lulu.twinfold」を検索すると原因の記録があります。",
+                               @"Finder quit several times in a short period, so Twinfold stopped and restored the normal Finder. "
+                               @"Search Console.app for \u201ccom.lulu.twinfold\u201d to see what happened.")];
         return;
     }
     [_injections addObject:now];
@@ -232,15 +245,17 @@ static BOOL IsAppleSilicon(void) {
     [self quitFinderThen:^(BOOL quit) {
         if (!quit) {
             self->_injecting = NO;
-            [self stopWithMessage:@"Finder が終了しませんでした（コピー中などの可能性があります）。"
-                                   @"作業が終わってから、メニューの「Finderに組み込み直す」を選んでください。"];
+            [self stopWithMessage:TWFText(@"Finder が終了しませんでした（コピー中などの可能性があります）。"
+                                   @"作業が終わってから、メニューの「Finderに組み込み直す」を選んでください。",
+                                   @"Finder did not quit (it may be copying files). "
+                                   @"When it is done, choose \u201cReload into Finder\u201d from the menu.")];
             return;
         }
         pid_t pid = [self spawnFinderWithDylib:dylib];
         self->_injecting = NO;
         if (pid <= 0) {
             [self restoreNormalFinder];
-            [self stopWithMessage:@"Finder を起動できませんでした。通常の Finder に戻しました。"];
+            [self stopWithMessage:TWFText(@"Finder を起動できませんでした。通常の Finder に戻しました。", @"Finder could not be launched. The normal Finder has been restored.")];
             return;
         }
         // 読み込みの確認。返事が無ければ macOS の制限で読み込めていない
@@ -250,8 +265,10 @@ static BOOL IsAppleSilicon(void) {
                     os_log(AgentLog(), "Finder pid=%d injected", pid);
                 } else {
                     os_log_error(AgentLog(), "Finder pid=%d did not answer", pid);
-                    [self stopWithMessage:@"Finder に Twinfold を読み込めませんでした。"
-                                           @"SIP が無効か、boot-args に -arm64e_preview_abi があるか確認してください。"];
+                    [self stopWithMessage:TWFText(@"Finder に Twinfold を読み込めませんでした。"
+                                           @"SIP が無効か、boot-args に -arm64e_preview_abi があるか確認してください。",
+                                           @"Twinfold could not be loaded into Finder. "
+                                           @"Check that SIP is disabled and boot-args includes -arm64e_preview_abi.")];
                 }
             }];
         });
@@ -398,50 +415,66 @@ static BOOL IsAppleSilicon(void) {
     BOOL enabled = [_prefs boolForKey:TWFPrefEnabled];
     NSString *status;
     if (!enabled) {
-        status = @"オフ（通常の Finder）";
+        status = TWFText(@"オフ（通常の Finder）", @"Off (normal Finder)");
     } else if (_stopped) {
-        status = @"この起動の間は停止中（通常の Finder）";
+        status = TWFText(@"この起動の間は停止中（通常の Finder）", @"Paused for this session (normal Finder)");
     } else if ([self finderIsInjected]) {
-        status = [NSString stringWithFormat:@"Finder に組み込み済み（pid %@）", _lastPong[@"pid"]];
+        status = [NSString stringWithFormat:TWFText(@"Finder に組み込み済み（pid %@）", @"Loaded into Finder (pid %@)"), _lastPong[@"pid"]];
     } else {
-        status = @"Finder に未組み込み";
+        status = TWFText(@"Finder に未組み込み", @"Not loaded into Finder");
     }
     [menu addItemWithTitle:status action:nil keyEquivalent:@""].enabled = NO;
     if ([self finderIsInjected] && ![_lastPong[@"hotkey"] boolValue] && [_prefs boolForKey:TWFPrefQuickWindowEnabled]) {
-        [menu addItemWithTitle:@"⚠ クイックウインドウのホットキーを登録できませんでした" action:nil keyEquivalent:@""].enabled = NO;
+        [menu addItemWithTitle:TWFText(@"⚠ クイックウインドウのホットキーを登録できませんでした", @"⚠ Could not register the quick window hotkey") action:nil keyEquivalent:@""].enabled = NO;
     }
-    NSMenuItem *power = [self addItem:menu title:(enabled ? @"Twinfold をオフにする（通常の Finder に戻す）" : @"Twinfold をオンにする")
+    NSMenuItem *power = [self addItem:menu title:(enabled ? TWFText(@"Twinfold をオフにする（通常の Finder に戻す）", @"Turn Twinfold Off (back to the normal Finder)") : TWFText(@"Twinfold をオンにする", @"Turn Twinfold On"))
                                action:@selector(togglePower:)];
     power.image = [NSImage imageWithSystemSymbolName:(enabled ? @"power" : @"power.circle.fill") accessibilityDescription:nil];
     [menu addItem:NSMenuItem.separatorItem];
 
-    NSMenuItem *quickWindow = [self addItem:menu title:[NSString stringWithFormat:@"クイックウインドウを表示／隠す（%@）", TWFHotKeySpokenLabel(_prefs)]
+    NSMenuItem *quickWindow = [self addItem:menu title:[NSString stringWithFormat:TWFText(@"クイックウインドウを表示／隠す（%@）", @"Show/Hide Quick Window (%@)"), TWFHotKeySpokenLabel(_prefs)]
                                action:@selector(toggleQuickWindow:)];
     quickWindow.enabled = enabled && [self finderIsInjected];
     [menu addItem:NSMenuItem.separatorItem];
-    [self addToggle:menu title:@"クイックウインドウ" key:TWFPrefQuickWindowEnabled];
-    [self addToggle:menu title:@"ほかのアプリに切り替えたらクイックウインドウを隠す" key:TWFPrefQuickWindowHideOnDeactivate];
-    [self addToggle:menu title:@"クイックウインドウを固定" key:TWFPrefQuickWindowPinned];
-    [self addToggle:menu title:@"デュアル表示（⌘U）" key:TWFPrefDualEnabled];
-    [self addToggle:menu title:@"切り取りと移動（⌘X → ⌘V）" key:TWFPrefCutPasteEnabled];
-    [self addItem:menu title:@"そのほかの設定…（Finder 設定の Twinfold）" action:@selector(openSettings:)].enabled = enabled;
+    [self addToggle:menu title:TWFText(@"クイックウインドウ", @"Quick Window") key:TWFPrefQuickWindowEnabled];
+    [self addToggle:menu title:TWFText(@"ほかのアプリに切り替えたらクイックウインドウを隠す", @"Hide Quick Window When Switching Apps") key:TWFPrefQuickWindowHideOnDeactivate];
+    [self addToggle:menu title:TWFText(@"クイックウインドウを固定", @"Pin Quick Window") key:TWFPrefQuickWindowPinned];
+    [self addToggle:menu title:TWFText(@"デュアル表示（⌘U）", @"Dual View (⌘U)") key:TWFPrefDualEnabled];
+    [self addToggle:menu title:TWFText(@"切り取りと移動（⌘X → ⌘V）", @"Cut and Move (⌘X → ⌘V)") key:TWFPrefCutPasteEnabled];
+    [self addItem:menu title:TWFText(@"そのほかの設定…（Finder 設定の Twinfold）", @"More Settings… (Twinfold in Finder Settings)") action:@selector(openSettings:)].enabled = enabled;
     [menu addItem:NSMenuItem.separatorItem];
 
-    NSMenuItem *folders = [self addItem:menu title:@"フォルダを常に上に表示（Finder を再起動）" action:@selector(toggleFinderPref:)];
+    NSMenuItem *folders = [self addItem:menu title:TWFText(@"フォルダを常に上に表示（Finder を再起動）", @"Keep Folders on Top (restarts Finder)") action:@selector(toggleFinderPref:)];
     folders.representedObject = @"_FXSortFoldersFirst";
     folders.state = [self finderBool:@"_FXSortFoldersFirst"] ? NSControlStateValueOn : NSControlStateValueOff;
-    NSMenuItem *hidden = [self addItem:menu title:@"隠しファイルを表示（⌘⇧. でも切替）" action:@selector(toggleFinderPref:)];
+    NSMenuItem *hidden = [self addItem:menu title:TWFText(@"隠しファイルを表示（⌘⇧. でも切替）", @"Show Hidden Files (also ⌘⇧.)") action:@selector(toggleFinderPref:)];
     hidden.representedObject = @"AppleShowAllFiles";
     hidden.state = [self finderBool:@"AppleShowAllFiles"] ? NSControlStateValueOn : NSControlStateValueOff;
     [menu addItem:NSMenuItem.separatorItem];
 
-    NSMenuItem *login = [self addItem:menu title:@"ログイン時に起動" action:@selector(toggleLoginItem:)];
+    NSMenuItem *login = [self addItem:menu title:TWFText(@"ログイン時に起動", @"Open at Login") action:@selector(toggleLoginItem:)];
     login.state = SMAppService.mainAppService.status == SMAppServiceStatusEnabled ? NSControlStateValueOn : NSControlStateValueOff;
-    [self addItem:menu title:@"Finder に組み込み直す" action:@selector(reinject:)].enabled = enabled;
-    [self addItem:menu title:@"マニュアルを開く" action:@selector(openManual:)];
-    [self addItem:menu title:@"アンインストール…" action:@selector(confirmUninstall:)];
-    [self addItem:menu title:@"Twinfold を終了（Finder は今の状態のまま）" action:@selector(quit:)];
-    [menu addItemWithTitle:[NSString stringWithFormat:@"バージョン %@", TWFVersion] action:nil keyEquivalent:@""].enabled = NO;
+    [self addItem:menu title:TWFText(@"Finder に組み込み直す", @"Reload into Finder") action:@selector(reinject:)].enabled = enabled;
+    [self addItem:menu title:TWFText(@"マニュアルを開く", @"Open Manual") action:@selector(openManual:)];
+    // 言語の項目は、どちらの言語の画面でも「Language」（設定タブと同じ）
+    NSMenuItem *language = [menu addItemWithTitle:@"Language" action:nil keyEquivalent:@""];
+    NSMenu *languages = [NSMenu new];
+    NSString *current = [_prefs stringForKey:TWFPrefLanguage] ?: @"auto";
+    for (NSArray<NSString *> *choice in @[ @[ @"auto", TWFText(@"macOS に合わせる", @"Same as macOS") ], @[ @"ja", @"日本語" ], @[ @"en", @"English" ] ]) {
+        NSMenuItem *item = [self addItem:languages title:choice[1] action:@selector(setLanguage:)];
+        item.representedObject = choice[0];
+        item.state = [current isEqualToString:choice[0]] ? NSControlStateValueOn : NSControlStateValueOff;
+    }
+    language.submenu = languages;
+    [self addItem:menu title:TWFText(@"アンインストール…", @"Uninstall…") action:@selector(confirmUninstall:)];
+    [self addItem:menu title:TWFText(@"Twinfold を終了（Finder は今の状態のまま）", @"Quit Twinfold (Finder stays as it is)") action:@selector(quit:)];
+    [menu addItemWithTitle:[NSString stringWithFormat:TWFText(@"バージョン %@", @"Version %@"), TWFVersion] action:nil keyEquivalent:@""].enabled = NO;
+}
+
+- (void)setLanguage:(NSMenuItem *)item {
+    [_prefs setObject:item.representedObject forKey:TWFPrefLanguage];
+    [_prefs synchronize];
+    [self sendCommand:TWFCommandReloadPrefs];   // Finder の中のメニューと設定画面も切り替える
 }
 
 - (void)togglePref:(NSMenuItem *)item {
@@ -451,9 +484,11 @@ static BOOL IsAppleSilicon(void) {
 }
 
 - (void)openManual:(id)sender {
-    NSURL *pdf = [NSBundle.mainBundle URLForResource:@"Twinfold-Manual-JA" withExtension:@"pdf"];
+    NSString *name = TWFText(@"Twinfold-Manual-JA", @"Twinfold-Manual-EN");
+    NSURL *pdf = [NSBundle.mainBundle URLForResource:name withExtension:@"pdf"];
     if (!pdf) {
-        [self stopWithMessage:@"アプリの中にマニュアル（Twinfold-Manual-JA.pdf）が見つかりません。build.sh で作り直してください。"];
+        [self stopWithMessage:[NSString stringWithFormat:TWFText(@"アプリの中にマニュアル（%@.pdf）が見つかりません。build.sh で作り直してください。",
+                                                                 @"The manual (%@.pdf) is missing from the app. Rebuild it with build.sh."), name]];
         return;
     }
     [NSWorkspace.sharedWorkspace openURL:pdf];
@@ -486,8 +521,8 @@ static BOOL IsAppleSilicon(void) {
                                                            : [service registerAndReturnError:&error];
     if (!ok) {
         NSAlert *alert = [NSAlert new];
-        alert.messageText = @"ログイン項目を変更できませんでした";
-        alert.informativeText = error.localizedDescription ?: @"不明なエラー";
+        alert.messageText = TWFText(@"ログイン項目を変更できませんでした", @"Could not change the login item");
+        alert.informativeText = error.localizedDescription ?: TWFText(@"不明なエラー", @"Unknown error");
         [NSApp activate];
         [alert runModal];
     }
@@ -542,11 +577,13 @@ static BOOL IsAppleSilicon(void) {
 
 - (void)confirmUninstall:(id)sender {
     NSAlert *alert = [NSAlert new];
-    alert.messageText = @"Twinfold をアンインストールしますか？";
-    alert.informativeText = @"通常の Finder に戻し、Twinfold.app をゴミ箱に入れ、Twinfold の設定とログイン項目を削除します。"
-                            @"Finder 自体の設定（隠しファイル、フォルダを常に上になど）は変えません。";
-    [alert addButtonWithTitle:@"アンインストール"].hasDestructiveAction = YES;
-    [alert addButtonWithTitle:@"キャンセル"];
+    alert.messageText = TWFText(@"Twinfold をアンインストールしますか？", @"Uninstall Twinfold?");
+    alert.informativeText = TWFText(@"通常の Finder に戻し、Twinfold.app をゴミ箱に入れ、Twinfold の設定とログイン項目を削除します。"
+                            @"Finder 自体の設定（隠しファイル、フォルダを常に上になど）は変えません。",
+                            @"This restores the normal Finder, moves Twinfold.app to the Trash, and removes Twinfold\u2019s settings and login item. "
+                            @"Finder\u2019s own settings (hidden files, folders on top) are not changed.");
+    [alert addButtonWithTitle:TWFText(@"アンインストール", @"Uninstall")].hasDestructiveAction = YES;
+    [alert addButtonWithTitle:TWFText(@"キャンセル", @"Cancel")];
     [NSApp activate];
     if ([alert runModal] == NSAlertFirstButtonReturn) [self uninstall];
 }
@@ -582,18 +619,22 @@ static BOOL IsAppleSilicon(void) {
 
         NSMutableString *info = [NSMutableString string];
         if (removed) {
-            [info appendString:@"Twinfold.app はゴミ箱に入れました。設定とログイン項目も削除しました。"];
+            [info appendString:TWFText(@"Twinfold.app はゴミ箱に入れました。設定とログイン項目も削除しました。", @"Twinfold.app has been moved to the Trash. Its settings and login item have been removed.")];
         } else {
-            [info appendFormat:@"設定とログイン項目は削除しましたが、アプリをゴミ箱に入れられませんでした（%@）。"
+            [info appendFormat:TWFText(@"設定とログイン項目は削除しましたが、アプリをゴミ箱に入れられませんでした（%@）。"
                                @"%@ を手動で削除してください。",
+                               @"The settings and login item were removed, but the app could not be moved to the Trash (%@). "
+                               @"Please delete %@ yourself."),
                                error.localizedDescription, NSBundle.mainBundle.bundlePath];
         }
         if (!quit) {
-            [info appendString:@"\n\nFinder が終了しなかったため、今の Finder はまだ Twinfold を読み込んでいます。"
-                               @"作業が終わったら Finder を再起動すると（⌥ を押しながら Dock の Finder を右クリック →「再度開く」）完全に外れます。"];
+            [info appendString:TWFText(@"\n\nFinder が終了しなかったため、今の Finder はまだ Twinfold を読み込んでいます。"
+                               @"作業が終わったら Finder を再起動すると（⌥ を押しながら Dock の Finder を右クリック →「再度開く」）完全に外れます。",
+                               @"\n\nFinder did not quit, so the running Finder still has Twinfold loaded. "
+                               @"Relaunch Finder when you are done (option-click Finder in the Dock and choose Relaunch) to remove it completely.")];
         }
         NSAlert *alert = [NSAlert new];
-        alert.messageText = removed ? @"Twinfold をアンインストールしました" : @"アンインストールを完了できませんでした";
+        alert.messageText = removed ? TWFText(@"Twinfold をアンインストールしました", @"Twinfold has been uninstalled") : TWFText(@"アンインストールを完了できませんでした", @"Uninstall could not be completed");
         alert.informativeText = info;
         [NSApp activate];
         [alert runModal];

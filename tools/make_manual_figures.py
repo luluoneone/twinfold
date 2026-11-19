@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """マニュアル用の図を描く（実際の画面を撮れない・撮ると個人のファイル名が写るもの）。
 
-  python3 tools/make_manual_figures.py
+  python3 tools/make_manual_figures.py          # 日本語（docs/manual/shots）
+  python3 tools/make_manual_figures.py en       # 英語（docs/manual/shots_en）
 
 docs/manual/shots/ に次を書き出す:
   00-keyboard.png         … ホットキー（control＋option＋F）の場所
@@ -14,7 +15,14 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parent.parent
-OUT = ROOT / "docs" / "manual" / "shots"
+import sys
+
+LANG = sys.argv[1] if len(sys.argv) > 1 else "ja"
+OUT = ROOT / "docs" / "manual" / ("shots_en" if LANG == "en" else "shots")
+
+
+def T(ja: str, en: str) -> str:
+    return en if LANG == "en" else ja
 FONTS = Path.home() / "Library" / "Fonts"
 
 INK = (29, 36, 51)
@@ -87,14 +95,16 @@ def keyboard() -> None:
     x += int(u * 1.15) + gap
     key(x, y2, int(u * 1.35), "command", sub="⌘")
     x += int(u * 1.35) + gap
-    key(x, y2, W - x - 90, "スペース")
+    key(x, y2, W - x - 90, T("スペース", "space"))
 
-    d.text((left, 30), "キーボードの左下", font=font(44, True), fill=INK)
+    d.text((left, 30), T("キーボードの左下", "Bottom-left of the keyboard"), font=font(44, True), fill=INK)
     ty = y2 + u + 60
-    d.text((left, ty), "1 control と 2 option を押したまま、3 F を押します。", font=font(40, True), fill=INK)
-    d.text((left, ty + 60), "画面の下から Finder が出ます。もう一度押すと隠れます。", font=font(36), fill=INK)
-    d.text((left, ty + 122), "ほかのメーカーのキーボードでは control が「ctrl」、option が「alt」「opt」と刻印されていることがあります。", font=font(30), fill=MUTED)
-    d.text((left, ty + 166), "日本語配列では command の右に「英数」キーがありますが、使うキーの場所は同じです。", font=font(30), fill=MUTED)
+    d.text((left, ty), T("1 control と 2 option を押したまま、3 F を押します。", "Hold 1 control and 2 option, then press 3 F."), font=font(40, True), fill=INK)
+    d.text((left, ty + 60), T("画面の下から Finder が出ます。もう一度押すと隠れます。", "A Finder window slides up from the bottom. Press again to hide it."), font=font(36), fill=INK)
+    d.text((left, ty + 122), T("ほかのメーカーのキーボードでは control が「ctrl」、option が「alt」「opt」と刻印されていることがあります。",
+                               "On other keyboards, control may be labeled \u201cctrl\u201d and option \u201calt\u201d or \u201copt\u201d."), font=font(30), fill=MUTED)
+    d.text((left, ty + 166), T("日本語配列では command の右に「英数」キーがありますが、使うキーの場所は同じです。",
+                               "The keys are in the same place on every Mac keyboard layout."), font=font(30), fill=MUTED)
     img.save(OUT / "00-keyboard.png", optimize=True)
 
 
@@ -109,19 +119,19 @@ def quickwindow_use() -> None:
     app = (110, 110, W - 110, 640)
     d.rounded_rectangle(app, radius=22, fill=(40, 44, 54))
     d.rounded_rectangle((app[0], app[1], app[2], app[1] + 56), radius=22, fill=(58, 63, 76))
-    d.text((app[0] + 30, app[1] + 10), "編集アプリ（Premiere Pro など）", font=font(32, True), fill=WHITE)
+    d.text((app[0] + 30, app[1] + 10), T("編集アプリ（Premiere Pro など）", "Editing app (e.g. Premiere Pro)"), font=font(32, True), fill=WHITE)
     # タイムライン
     for i, (x0, x1, col) in enumerate([(220, 700, (86, 140, 230)), (720, 1100, (86, 140, 230)), (220, 980, (90, 190, 140))]):
         y = 430 + i * 60 if i < 2 else 550
         if i == 1:
             y = 430
         d.rounded_rectangle((x0, y, x1, y + 44), radius=8, fill=col)
-    d.text((220, 380), "タイムライン", font=font(28), fill=(190, 196, 210))
+    d.text((220, 380), T("タイムライン", "Timeline"), font=font(28), fill=(190, 196, 210))
     # クイックウインドウ（下）
     qw = (60, 700, W - 60, H - 60)
     d.rounded_rectangle(qw, radius=26, fill=WHITE, outline=RED, width=8)
-    d.text((qw[0] + 40, qw[1] + 22), "クイックウインドウ（画面の下から出る Finder）", font=font(36, True), fill=RED)
-    files = ["A001_C001.mov", "A001_C002.mov", "A001_C003.mov", "音声_ピンマイク.wav"]
+    d.text((qw[0] + 40, qw[1] + 22), T("クイックウインドウ（画面の下から出る Finder）", "Quick window (slides up from the bottom)"), font=font(36, True), fill=RED)
+    files = ["A001_C001.mov", "A001_C002.mov", "A001_C003.mov", T("音声_ピンマイク.wav", "audio_lav_mic.wav")]
     for i, name in enumerate(files):
         y = qw[1] + 100 + i * 80
         sel = i == 1
@@ -137,13 +147,13 @@ def quickwindow_use() -> None:
     for da in (2.6, -2.6):
         d.line((ex, ey, ex + 50 * math.cos(ang + da), ey + 50 * math.sin(ang + da)), fill=RED, width=12)
     d.rounded_rectangle((ex + 40, ey + 60, ex + 530, ey + 130), radius=14, fill=RED)
-    centered(d, (ex + 40, ey + 60, ex + 530, ey + 130), "そのままドラッグして入れる", font(32, True), WHITE)
+    centered(d, (ex + 40, ey + 60, ex + 530, ey + 130), T("そのままドラッグして入れる", "Just drag it in"), font(32, True), WHITE)
     # キーの吹き出し
     kb = (W - 760, qw[1] + 110, W - 120, qw[1] + 330)
     d.rounded_rectangle(kb, radius=20, fill=(255, 247, 230), outline=(240, 170, 60), width=4)
     d.text((kb[0] + 30, kb[1] + 24), "control + option + F", font=font(44, True), fill=INK)
-    d.text((kb[0] + 30, kb[1] + 96), "押すと出る・もう一度押すと隠れる", font=font(32), fill=MUTED)
-    d.text((kb[0] + 30, kb[1] + 146), "編集アプリに戻っても自動で隠れる", font=font(32), fill=MUTED)
+    d.text((kb[0] + 30, kb[1] + 96), T("押すと出る・もう一度押すと隠れる", "Press to show, press again to hide"), font=font(32), fill=MUTED)
+    d.text((kb[0] + 30, kb[1] + 146), T("編集アプリに戻っても自動で隠れる", "Hides itself when you go back to the app"), font=font(32), fill=MUTED)
     img.save(OUT / "02-quickwindow-use.png", optimize=True)
 
 

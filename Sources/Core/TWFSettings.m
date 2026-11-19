@@ -241,7 +241,7 @@ NSURL *TWFAgentAppURL(void) {
     NSToolbarItem *item = [[NSToolbarItem alloc] initWithItemIdentifier:kTWFToolbarItemID];
     item.label = @"Twinfold";
     item.paletteLabel = @"Twinfold";
-    item.toolTip = @"Twinfold の設定";
+    item.toolTip = TWFText(@"Twinfold の設定", @"Twinfold settings");
     item.image = _icon;
     item.target = self;
     item.action = @selector(showPane:);
@@ -368,13 +368,13 @@ NSURL *TWFAgentAppURL(void) {
     [iconView.widthAnchor constraintEqualToConstant:56].active = YES;
     [iconView.heightAnchor constraintEqualToConstant:56].active = YES;
     NSTextField *name = [self label:@"Twinfold" font:[NSFont boldSystemFontOfSize:20] color:NSColor.labelColor];
-    NSString *status = [NSString stringWithFormat:@"バージョン %@\nこの Finder に組み込み済み", TWFVersion];
+    NSString *status = [NSString stringWithFormat:TWFText(@"バージョン %@\nこの Finder に組み込み済み", @"Version %@\nLoaded into this Finder"), TWFVersion];
     NSStackView *titles = [NSStackView stackViewWithViews:@[ name, [self label:status font:small color:NSColor.secondaryLabelColor] ]];
     titles.orientation = NSUserInterfaceLayoutOrientationVertical;
     titles.alignment = NSLayoutAttributeLeading;
     titles.spacing = 2;
-    NSButton *manual = [NSButton buttonWithTitle:@"マニュアル" target:self action:@selector(openManual:)];
-    manual.toolTip = @"使い方のマニュアル（PDF）を開きます";
+    NSButton *manual = [NSButton buttonWithTitle:TWFText(@"マニュアル", @"Manual") target:self action:@selector(openManual:)];
+    manual.toolTip = TWFText(@"使い方のマニュアル（PDF）を開きます", @"Opens the user manual (PDF)");
     NSStackView *header = [NSStackView stackViewWithViews:@[ iconView, titles, manual ]];
     header.spacing = 12;
 
@@ -382,10 +382,10 @@ NSURL *TWFAgentAppURL(void) {
     _keycaps = [NSStackView stackViewWithViews:@[]];
     _keycaps.spacing = 4;
     [self updateKeycaps];
-    _hotKeyButton = [NSButton buttonWithTitle:@"変更…" target:self action:@selector(startRecording:)];
+    _hotKeyButton = [NSButton buttonWithTitle:TWFText(@"変更…", @"Change…") target:self action:@selector(startRecording:)];
     _hotKeyButton.bezelStyle = NSBezelStyleRounded;
-    _hotKeyButton.toolTip = @"押してから、新しいキーの組み合わせを押します（control・option・command のどれかが必要）";
-    NSStackView *hotKeyRow = [NSStackView stackViewWithViews:@[ [self label:@"ホットキー" font:[NSFont systemFontOfSize:13] color:NSColor.labelColor], _keycaps, _hotKeyButton ]];
+    _hotKeyButton.toolTip = TWFText(@"押してから、新しいキーの組み合わせを押します（control・option・command のどれかが必要）", @"Click, then press a new key combination (it must include control, option or command)");
+    NSStackView *hotKeyRow = [NSStackView stackViewWithViews:@[ [self label:TWFText(@"ホットキー", @"Hotkey") font:[NSFont systemFontOfSize:13] color:NSColor.labelColor], _keycaps, _hotKeyButton ]];
     hotKeyRow.spacing = 10;
     NSSlider *height = [NSSlider sliderWithValue:[_prefs doubleForKey:TWFPrefQuickWindowHeight] * 100 minValue:20 maxValue:90
                                           target:self action:@selector(heightChanged:)];
@@ -393,35 +393,36 @@ NSURL *TWFAgentAppURL(void) {
     [height.widthAnchor constraintEqualToConstant:MIN(200, textWidth - 110)].active = YES;
     _heightLabel = [self label:@"" font:[NSFont monospacedDigitSystemFontOfSize:13 weight:NSFontWeightRegular] color:NSColor.secondaryLabelColor];
     [self updateHeightLabel:height.doubleValue];
-    NSStackView *heightRow = [NSStackView stackViewWithViews:@[ [self label:@"高さ" font:[NSFont systemFontOfSize:13] color:NSColor.labelColor], height, _heightLabel ]];
+    NSStackView *heightRow = [NSStackView stackViewWithViews:@[ [self label:TWFText(@"高さ", @"Height") font:[NSFont systemFontOfSize:13] color:NSColor.labelColor], height, _heightLabel ]];
 
     // 外す・アンインストール
-    NSButton *disable = [NSButton buttonWithTitle:@"一時的にオフにする" target:self action:@selector(disableClicked:)];
-    NSButton *uninstall = [NSButton buttonWithTitle:@"アンインストール…" target:self action:@selector(uninstallClicked:)];
+    NSButton *disable = [NSButton buttonWithTitle:TWFText(@"一時的にオフにする", @"Turn Off for Now") target:self action:@selector(disableClicked:)];
+    NSButton *uninstall = [NSButton buttonWithTitle:TWFText(@"アンインストール…", @"Uninstall…") target:self action:@selector(uninstallClicked:)];
     uninstall.hasDestructiveAction = YES;
-    disable.toolTip = @"Finder を再起動して、通常の Finder に戻します";
-    uninstall.toolTip = @"通常の Finder に戻し、Twinfold.app をゴミ箱に入れ、設定とログイン項目を削除します";
+    disable.toolTip = TWFText(@"Finder を再起動して、通常の Finder に戻します", @"Restarts Finder as the normal Finder");
+    uninstall.toolTip = TWFText(@"通常の Finder に戻し、Twinfold.app をゴミ箱に入れ、設定とログイン項目を削除します", @"Restores the normal Finder, moves Twinfold.app to the Trash and removes its settings and login item");
     NSStackView *buttons = [NSStackView stackViewWithViews:@[ disable, uninstall ]];
 
     NSArray<NSView *> *rows = @[
         header,
-        [self sectionTitle:@"クイックウインドウ（画面下から出る Finder）"],
-        [self checkbox:@"クイックウインドウを使う" key:TWFPrefQuickWindowEnabled],
-        [self label:@"どのアプリを使っていても、ホットキーで画面の下から Finder が出ます。もう一度押すと隠れます。ファイルを編集アプリやメールへドラッグするときに便利です。"
+        [self sectionTitle:TWFText(@"クイックウインドウ（画面下から出る Finder）", @"Quick Window (slides up from the bottom)")],
+        [self checkbox:TWFText(@"クイックウインドウを使う", @"Use the quick window") key:TWFPrefQuickWindowEnabled],
+        [self label:TWFText(@"どのアプリを使っていても、ホットキーで画面の下から Finder が出ます。もう一度押すと隠れます。ファイルを編集アプリやメールへドラッグするときに便利です。", @"Press the hotkey in any app and a Finder window slides up from the bottom of the screen. Press it again to hide it. Handy for dragging files into an editing app or an email.")
                font:small color:NSColor.secondaryLabelColor],
         hotKeyRow,
         heightRow,
-        [self checkbox:@"ほかのアプリに切り替えたら隠す" key:TWFPrefQuickWindowHideOnDeactivate],
-        [self checkbox:@"固定する（切り替えても隠さない）" key:TWFPrefQuickWindowPinned],
-        [self sectionTitle:@"ウインドウとファイル"],
-        [self checkbox:@"デュアル表示（⌘U で左右2画面）" key:TWFPrefDualEnabled],
-        [self checkbox:@"切り取りと移動（⌘X → ⌘V）" key:TWFPrefCutPasteEnabled],
-        [self label:@"タブ（⌘T）と隠しファイル（⌘⇧.）は Finder の標準機能です。"
+        [self checkbox:TWFText(@"ほかのアプリに切り替えたら隠す", @"Hide when switching to another app") key:TWFPrefQuickWindowHideOnDeactivate],
+        [self checkbox:TWFText(@"固定する（切り替えても隠さない）", @"Pin it (stay visible when switching apps)") key:TWFPrefQuickWindowPinned],
+        [self sectionTitle:TWFText(@"ウインドウとファイル", @"Windows and Files")],
+        [self checkbox:TWFText(@"デュアル表示（⌘U で左右2画面）", @"Dual view (⌘U for two side-by-side panes)") key:TWFPrefDualEnabled],
+        [self checkbox:TWFText(@"切り取りと移動（⌘X → ⌘V）", @"Cut and move (⌘X → ⌘V)") key:TWFPrefCutPasteEnabled],
+        [self label:TWFText(@"タブ（⌘T）と隠しファイル（⌘⇧.）は Finder の標準機能です。", @"Tabs (⌘T) and hidden files (⌘⇧.) are built into Finder.")
                font:small color:NSColor.secondaryLabelColor],
-        [self sectionTitle:@"Twinfold を外す"],
+        [self sectionTitle:TWFText(@"Twinfold を外す", @"Remove Twinfold")],
         buttons,
-        [self label:@"オフにしても、メニューバーの Twinfold からいつでも戻せます。"
+        [self label:TWFText(@"オフにしても、メニューバーの Twinfold からいつでも戻せます。", @"You can turn it back on any time from Twinfold in the menu bar.")
                font:small color:NSColor.secondaryLabelColor],
+        [self languageRow],
     ];
     NSStackView *stack = [NSStackView stackViewWithViews:rows];
     stack.orientation = NSUserInterfaceLayoutOrientationVertical;
@@ -440,6 +441,46 @@ NSURL *TWFAgentAppURL(void) {
     [stack setCustomSpacing:16 afterView:rows[7]];
     [stack setCustomSpacing:16 afterView:rows[11]];
     return stack;
+}
+
+// 言語。見出しはどちらの言語の画面でも「Language」（日本の人にも通じる。2026-11-19 ナオキの判断で「言語 / Language」から変更）
+- (NSView *)languageRow {
+    NSPopUpButton *popup = [NSPopUpButton new];
+    NSString *current = [_prefs stringForKey:TWFPrefLanguage] ?: @"auto";
+    for (NSArray<NSString *> *choice in @[ @[ @"auto", TWFText(@"macOS に合わせる", @"Same as macOS") ], @[ @"ja", @"日本語" ], @[ @"en", @"English" ] ]) {
+        [popup addItemWithTitle:choice[1]];
+        popup.lastItem.representedObject = choice[0];
+        if ([current isEqualToString:choice[0]]) [popup selectItem:popup.lastItem];
+    }
+    popup.target = self;
+    popup.action = @selector(languageChanged:);
+    NSStackView *row = [NSStackView stackViewWithViews:@[ [self label:@"Language" font:[NSFont systemFontOfSize:13] color:NSColor.labelColor], popup ]];
+    row.spacing = 10;
+    return row;
+}
+
+- (void)languageChanged:(NSPopUpButton *)popup {
+    [_prefs setObject:popup.selectedItem.representedObject forKey:TWFPrefLanguage];
+    [_prefs synchronize];
+    // 選んだ直後に画面を作り直す（ポップアップの処理が終わってから）
+    dispatch_async(dispatch_get_main_queue(), ^{ [self reloadLanguage]; });
+}
+
+- (void)reloadLanguage {
+    for (NSToolbar *toolbar in _windows.keyEnumerator) {
+        for (NSToolbarItem *item in toolbar.items) {
+            if ([item.itemIdentifier isEqualToString:kTWFToolbarItemID]) item.toolTip = TWFText(@"Twinfold の設定", @"Twinfold settings");
+        }
+    }
+    NSWindow *w = _overlayWindow;
+    if (!_overlay || !w) return;
+    [self removeOverlay];
+    for (NSToolbarItem *item in w.toolbar.items) {
+        if ([item.itemIdentifier isEqualToString:kTWFToolbarItemID]) {
+            [self showPane:item];
+            return;
+        }
+    }
 }
 
 - (void)checkboxChanged:(NSButton *)b {
@@ -471,7 +512,7 @@ NSURL *TWFAgentAppURL(void) {
 - (void)startRecording:(NSButton *)sender {
     if (_recordMonitor) return;
     for (NSView *v in _keycaps.arrangedSubviews.copy) [v removeFromSuperview];
-    [_keycaps addArrangedSubview:[self label:@"新しいキーを押してください（esc で取消）" font:[NSFont systemFontOfSize:12] color:NSColor.controlAccentColor]];
+    [_keycaps addArrangedSubview:[self label:TWFText(@"新しいキーを押してください（esc で取消）", @"Press the new keys (esc to cancel)") font:[NSFont systemFontOfSize:12] color:NSColor.controlAccentColor]];
     _hotKeyButton.enabled = NO;
     [_quickWindow setHotKeySuspended:YES];
     __weak TWFSettings *weakSelf = self;
@@ -520,7 +561,7 @@ NSURL *TWFAgentAppURL(void) {
 }
 
 - (void)openManual:(id)sender {
-    NSString *pdf = TWFResourcePath(@"Twinfold-Manual-JA.pdf");
+    NSString *pdf = TWFResourcePath(TWFText(@"Twinfold-Manual-JA.pdf", @"Twinfold-Manual-EN.pdf"));
     if (![NSFileManager.defaultManager fileExistsAtPath:pdf]) {
         os_log_error(TWFLog(), "settings: manual not found at %{public}@", pdf);
         NSBeep();
@@ -538,25 +579,28 @@ NSURL *TWFAgentAppURL(void) {
     alert.informativeText = info;
     NSButton *ok = [alert addButtonWithTitle:button];
     ok.hasDestructiveAction = destructive;
-    [alert addButtonWithTitle:@"キャンセル"];
+    [alert addButtonWithTitle:TWFText(@"キャンセル", @"Cancel")];
     [alert beginSheetModalForWindow:_overlayWindow completionHandler:^(NSModalResponse r) {
         if (r == NSAlertFirstButtonReturn) then();
     }];
 }
 
 - (void)disableClicked:(id)sender {
-    [self confirm:@"Twinfold を一時的にオフにしますか？"
-             info:@"Finder を再起動して、通常の Finder に戻します。メニューバーの Twinfold から「Twinfold をオンにする」でいつでも戻せます。"
-           button:@"オフにする"
+    [self confirm:TWFText(@"Twinfold を一時的にオフにしますか？", @"Turn Twinfold off for now?")
+             info:TWFText(@"Finder を再起動して、通常の Finder に戻します。メニューバーの Twinfold から「Twinfold をオンにする」でいつでも戻せます。",
+                          @"Finder restarts as the normal Finder. You can turn Twinfold back on any time with \u201cTurn Twinfold On\u201d in the menu bar.")
+           button:TWFText(@"オフにする", @"Turn Off")
       destructive:NO
              then:^{ [self sendRequest:TWFRequestDisable]; }];
 }
 
 - (void)uninstallClicked:(id)sender {
-    [self confirm:@"Twinfold をアンインストールしますか？"
-             info:@"通常の Finder に戻し、Twinfold.app をゴミ箱に入れ、Twinfold の設定とログイン項目を削除します。"
-                  @"Finder 自体の設定（隠しファイル、フォルダを常に上になど）は変えません。"
-           button:@"アンインストール"
+    [self confirm:TWFText(@"Twinfold をアンインストールしますか？", @"Uninstall Twinfold?")
+             info:TWFText(@"通常の Finder に戻し、Twinfold.app をゴミ箱に入れ、Twinfold の設定とログイン項目を削除します。"
+                          @"Finder 自体の設定（隠しファイル、フォルダを常に上になど）は変えません。",
+                          @"This restores the normal Finder, moves Twinfold.app to the Trash, and removes Twinfold\u2019s settings and login item. "
+                          @"Finder\u2019s own settings (hidden files, folders on top) are not changed.")
+           button:TWFText(@"アンインストール", @"Uninstall")
       destructive:YES
              then:^{ [self sendRequest:TWFRequestUninstall]; }];
 }

@@ -75,6 +75,12 @@ JP = "LULUJP"
 JP_BOLD = "LULUJPBold"
 SYM = "LULUSym"
 PUBLISHER = "LULU Apps"
+# マニュアルの言語。1行目の見出しに "User Manual" があれば英語（目次・見出し・初回起動の案内を英語にする）
+LANG = "ja"
+
+
+def L(ja: str, en: str) -> str:
+    return en if LANG == "en" else ja
 TEXT_WIDTH = A4[0] - 34 * mm
 
 
@@ -182,6 +188,26 @@ def _icon_png(path: Path) -> Path | None:
 
 def gatekeeper_lines(app: str) -> list[str]:
     """初回起動の案内。署名・公証の有無で文面を切り替える（Markdown の行で返す）。"""
+    if LANG == "en":
+        if SIGNED:
+            return ["> If macOS warns that the developer cannot be verified, the ZIP is damaged or did not come from the official page. "
+                    "Do not open it; download it again. Official builds are signed with a Developer ID and notarized by Apple."]
+        return [
+            "### First launch only (if macOS says the app cannot be opened)",
+            "",
+            "This build is not notarized by Apple, so macOS blocks the first launch. "
+            "After checking that you downloaded it yourself from the official page, allow it once as follows. It opens normally after that.",
+            "",
+            "1. Double-click %s. If you see \u201ccannot be opened\u201d or \u201cdeveloper cannot be verified\u201d, click Done. Do not click Move to Trash." % app,
+            "2. Open System Settings from the Apple menu and choose Privacy & Security.",
+            "3. Scroll down to Security and click **Open Anyway** next to the message saying %s was blocked." % app,
+            "4. Click Open Anyway again in the confirmation and allow it with your password (or Touch ID).",
+            "",
+            "> Note: Only do this for a ZIP you downloaded yourself from the official page, never for files forwarded by someone or found elsewhere. "
+            "If the values in SHA256SUMS.txt match the ones on the download page, the files are unchanged.",
+            "",
+            "On macOS 14 you can also right-click the app, choose Open, and click Open in the confirmation.",
+        ]
     if SIGNED:
         return [
             "> 起動時に「開発元を検証できません」などの警告が出た場合は、ダウンロードしたZIPが壊れているか、配布元以外のファイルです。"
@@ -333,7 +359,7 @@ class CoverCard(Flowable):
         c.drawString(14 * mm, self.height - 80 * mm, self.product)
         c.setFont(JP, 15)
         c.setFillColor(colors.HexColor("#dfe8f7"))
-        c.drawString(14 * mm, self.height - 91 * mm, "ユーザーマニュアル")
+        c.drawString(14 * mm, self.height - 91 * mm, L("ユーザーマニュアル", "User Manual"))
         c.setFont(JP, 10)
         c.setFillColor(colors.HexColor("#c7d6ee"))
         c.drawString(14 * mm, self.height - 104 * mm, self.tagline)
@@ -441,7 +467,7 @@ def parse(markdown: str, base: Path, styles):
     product = "LULU Apps"
     tagline = ""
     cards: list[tuple[str, str, str]] = []
-    footer_left = "Mac用・このMacの中だけで処理"
+    footer_left = L("Mac用・このMacの中だけで処理", "For Mac")
     icon: Path | None = None
     meta: list[str] = []
     body: list = []
@@ -482,10 +508,10 @@ def parse(markdown: str, base: Path, styles):
             index += 1
             continue
         if s.startswith("# "):
-            product = s[2:].replace("ユーザーマニュアル", "").strip()
+            product = s[2:].replace("ユーザーマニュアル", "").replace("User Manual", "").strip()
             index += 1
             continue
-        if re.match(r"^(対象バージョン|更新日|提供):", s):
+        if re.match(r"^(対象バージョン|更新日|提供|Version|Updated|Publisher):", s):
             meta.append(s)
             index += 1
             continue
@@ -525,7 +551,7 @@ def parse(markdown: str, base: Path, styles):
             continue
         if s.startswith("> "):
             flush()
-            warning = re.match(r"^(注意|警告|重要)[：:]", s[2:].strip())
+            warning = re.match(r"^(注意|警告|重要|Note|Warning|Important)[：:]", s[2:].strip())
             body.append(Paragraph(inline_markup(s[2:]), styles["warn" if warning else "quote"]))
             index += 1
             continue
@@ -584,13 +610,17 @@ def parse(markdown: str, base: Path, styles):
     toc.levelStyles = [styles["toc_entry"]]
     toc.dotsMinLevel = 0
     story = [CoverCard(product, tagline, cards, footer_left, icon), NextPageTemplate("content"), PageBreak(),
-             Paragraph("目次", styles["toc_title"]),
-             Paragraph("章名またはページ番号をクリックすると、その章へ移動できます。" + ("　" + "　".join(meta) if meta else ""), styles["toc_lead"]),
+             Paragraph(L("目次", "Contents"), styles["toc_title"]),
+             Paragraph(L("章名またはページ番号をクリックすると、その章へ移動できます。", "Click a chapter title or page number to jump to it.")
+                       + (L("　", "  ") + L("　", "  ").join(meta) if meta else ""), styles["toc_lead"]),
              toc, PageBreak()] + body
     return product, story
 
 
 def build(source: Path, output: Path) -> None:
+    global LANG
+    first = source.read_text(encoding="utf-8").splitlines()[0]
+    LANG = "en" if "User Manual" in first else "ja"
     register_fonts()
     styles = style_map()
     product, story = parse(source.read_text(encoding="utf-8"), source.parent, styles)
@@ -605,7 +635,7 @@ def build(source: Path, output: Path) -> None:
         canvas.drawString(17 * mm, A4[1] - 13 * mm, product)
         canvas.setFillColor(MUTED)
         canvas.setFont(JP, 6.7)
-        canvas.drawRightString(A4[0] - 17 * mm, A4[1] - 13 * mm, "ユーザーマニュアル")
+        canvas.drawRightString(A4[0] - 17 * mm, A4[1] - 13 * mm, L("ユーザーマニュアル", "User Manual"))
         canvas.line(17 * mm, 14 * mm, A4[0] - 17 * mm, 14 * mm)
         canvas.setFont("Helvetica", 7)
         canvas.drawString(17 * mm, 9.5 * mm, "by %s" % PUBLISHER)
@@ -614,7 +644,7 @@ def build(source: Path, output: Path) -> None:
 
     output.parent.mkdir(parents=True, exist_ok=True)
     doc = ManualDoc(str(output), pagesize=A4, leftMargin=17 * mm, rightMargin=17 * mm, topMargin=22 * mm, bottomMargin=18 * mm,
-                    title="%s ユーザーマニュアル" % product, author=PUBLISHER, subject="%s 操作マニュアル" % product)
+                    title=L("%s ユーザーマニュアル", "%s User Manual") % product, author=PUBLISHER, subject=L("%s 操作マニュアル", "%s user guide") % product)
     doc.addPageTemplates([
         PageTemplate(id="cover", frames=[Frame(17 * mm, 17 * mm, TEXT_WIDTH, A4[1] - 34 * mm, id="cover")]),
         PageTemplate(id="content", frames=[Frame(17 * mm, 18 * mm, TEXT_WIDTH, A4[1] - 40 * mm, id="content")], onPage=on_page),

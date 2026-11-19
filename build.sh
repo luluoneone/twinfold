@@ -13,6 +13,8 @@ APP="$BUILD/Twinfold.app"
 MIN_OS=14.0
 MANUAL_MD="$ROOT/docs/manual/MANUAL_JA.md"
 MANUAL_PDF="$ROOT/docs/manual/Twinfold-Manual-JA.pdf"
+MANUAL_EN_MD="$ROOT/docs/manual/MANUAL_EN.md"
+MANUAL_EN_PDF="$ROOT/docs/manual/Twinfold-Manual-EN.pdf"
 CFLAGS=(-fobjc-arc -O2 -Wall -Wextra -Werror -Wno-unused-parameter -mmacosx-version-min=$MIN_OS -I"$ROOT/Sources/Shared" -I"$ROOT/Sources/Core")
 
 run_tests() {
@@ -29,11 +31,13 @@ build() {
     # アイコンはアプリと、Finder 設定のタブの両方で使う（作り直しは tools/make_icon.sh）
     cp "$ROOT/Sources/Resources/Twinfold.icns" "$APP/Contents/Resources/"
     # マニュアル（PDF）は docs/manual から作る（./build.sh manual）。メニューと設定画面の「マニュアル」で開く
-    if [[ -f "$MANUAL_PDF" ]]; then
-        cp "$MANUAL_PDF" "$APP/Contents/Resources/"
-    else
-        echo "warning: $MANUAL_PDF がありません。./build.sh manual で作ってください" >&2
-    fi
+    for pdf in "$MANUAL_PDF" "$MANUAL_EN_PDF"; do
+        if [[ -f "$pdf" ]]; then
+            cp "$pdf" "$APP/Contents/Resources/"
+        else
+            echo "warning: $pdf がありません。./build.sh manual で作ってください" >&2
+        fi
+    done
 
     # Finder は Apple silicon では arm64e、Intel では x86_64 なので、dylib はその2つを入れる
     clang -arch arm64e -arch x86_64 -dynamiclib "${CFLAGS[@]}" \
@@ -67,18 +71,19 @@ install_app() {
 
 build_manual() {
     python3 "$ROOT/tools/build_manual_pdf.py" "$MANUAL_MD" "$MANUAL_PDF"
+    python3 "$ROOT/tools/build_manual_pdf.py" "$MANUAL_EN_MD" "$MANUAL_EN_PDF"
 }
 
 make_dist() {
-    [[ -f "$MANUAL_PDF" ]] || { echo "dist にはマニュアルが必要です: ./build.sh manual" >&2; exit 1; }
+    [[ -f "$MANUAL_PDF" && -f "$MANUAL_EN_PDF" ]] || { echo "dist にはマニュアル（日本語・英語）が必要です: ./build.sh manual" >&2; exit 1; }
     local version=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APP/Contents/Info.plist")
     local zip="$ROOT/dist/Twinfold-$version.zip"
     mkdir -p "$ROOT/dist"
     rm -f "$zip"
     # ditto で固めると、署名と拡張属性が壊れない
     ditto -c -k --sequesterRsrc --keepParent "$APP" "$zip"
-    cp "$MANUAL_PDF" "$ROOT/dist/"
-    (cd "$ROOT/dist" && shasum -a 256 "${zip:t}" "${MANUAL_PDF:t}" > SHA256SUMS.txt)
+    cp "$MANUAL_PDF" "$MANUAL_EN_PDF" "$ROOT/dist/"
+    (cd "$ROOT/dist" && shasum -a 256 "${zip:t}" "${MANUAL_PDF:t}" "${MANUAL_EN_PDF:t}" > SHA256SUMS.txt)
     echo "dist: $zip"
     cat "$ROOT/dist/SHA256SUMS.txt"
 }

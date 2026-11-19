@@ -2,7 +2,7 @@
 #pragma once
 #import <Foundation/Foundation.h>
 
-#define TWFVersion @"0.4.2"
+#define TWFVersion @"0.5.0"
 #define TWFDomain @"com.lulu.twinfold"
 
 // Agent -> Core: object にコマンド名を入れて送る
@@ -31,6 +31,7 @@
 #define TWFPrefAnimationDuration @"AnimationDuration"
 #define TWFPrefCutPasteEnabled @"CutPasteEnabled"
 #define TWFPrefDualEnabled @"DualEnabled"
+#define TWFPrefLanguage @"Language"  // "auto"（macOS の言語に合わせる）・"ja"・"en"
 
 static inline NSDictionary *TWFDefaultPrefs(void) {
     return @{
@@ -46,6 +47,7 @@ static inline NSDictionary *TWFDefaultPrefs(void) {
         TWFPrefAnimationDuration: @0.25,
         TWFPrefCutPasteEnabled: @YES,
         TWFPrefDualEnabled: @YES,
+        TWFPrefLanguage: @"auto",
     };
 }
 
@@ -61,6 +63,21 @@ static inline NSString *TWFHotKeyLabel(NSUserDefaults *prefs) {
     return s;
 }
 
+// 画面の言語。設定の Language（auto・ja・en）を見て、auto なら macOS の最初の言語が日本語のときだけ日本語にする。
+// 常駐アプリと Finder の中の Core のどちらからも同じ設定を読むため、CFPreferences で直接読む
+static inline BOOL TWFUseEnglish(void) {
+    id lang = CFBridgingRelease(CFPreferencesCopyAppValue((__bridge CFStringRef)TWFPrefLanguage, (__bridge CFStringRef)TWFDomain));
+    if ([lang isEqual:@"ja"]) return NO;
+    if ([lang isEqual:@"en"]) return YES;
+    NSString *first = NSLocale.preferredLanguages.firstObject ?: @"en";
+    return ![first hasPrefix:@"ja"];
+}
+
+// 日本語と英語を並べて書き、今の言語のほうを返す
+static inline NSString *TWFText(NSString *ja, NSString *en) {
+    return TWFUseEnglish() ? en : ja;
+}
+
 // ホットキーをキーの名前で並べる（例: control, option, F）。キーボードの刻印と同じ言葉にする
 static inline NSArray<NSString *> *TWFHotKeyNames(NSUserDefaults *prefs) {
     NSInteger mods = [prefs integerForKey:TWFPrefQuickWindowModifiers];
@@ -70,7 +87,7 @@ static inline NSArray<NSString *> *TWFHotKeyNames(NSUserDefaults *prefs) {
     if (mods & 0x0200) [names addObject:@"shift"];
     if (mods & 0x0100) [names addObject:@"command"];
     NSString *key = [prefs stringForKey:TWFPrefQuickWindowKeyLabel] ?: @"?";
-    [names addObject:[key isEqualToString:@"Space"] ? @"スペース" : key];
+    [names addObject:[key isEqualToString:@"Space"] ? TWFText(@"スペース", @"Space") : key];
     return names;
 }
 

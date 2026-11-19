@@ -36,6 +36,7 @@ static OSErr TWFReopenHandler(const AppleEvent *event, AppleEvent *reply, SRefCo
     TWFCutState _cut;
     id _keyMonitor;
     BOOL _menuInstalled;
+    NSMenuItem *_dualItem, *_quickWindowItem, *_pinItem;  // Finder の「ウインドウ」メニューに足した項目
 }
 
 + (instancetype)shared {
@@ -124,7 +125,11 @@ static OSErr TWFReopenHandler(const AppleEvent *event, AppleEvent *reply, SRefCo
     } else if ([cmd isEqualToString:TWFCommandOpenSettings]) {
         [_settings openPane];
     } else if ([cmd isEqualToString:TWFCommandReloadPrefs]) {
+        // 常駐アプリが書いた設定（言語など）を、この Finder の中でもすぐ読めるようにする
+        CFPreferencesAppSynchronize((__bridge CFStringRef)TWFDomain);
         [_quickWindow reloadPrefs];
+        [self updateMenuTitles];
+        [_settings reloadLanguage];
         [self postPong];
     }
 }
@@ -181,18 +186,29 @@ static OSErr TWFReopenHandler(const AppleEvent *event, AppleEvent *reply, SRefCo
     _menuInstalled = YES;
     [windowMenu addItem:NSMenuItem.separatorItem];
 
-    NSMenuItem *dual = [[NSMenuItem alloc] initWithTitle:@"デュアル表示" action:@selector(toggleDual:) keyEquivalent:@"u"];
+    NSMenuItem *dual = [[NSMenuItem alloc] initWithTitle:@"" action:@selector(toggleDual:) keyEquivalent:@"u"];
     dual.keyEquivalentModifierMask = NSEventModifierFlagCommand;
     dual.target = self;
     [windowMenu addItem:dual];
 
-    NSMenuItem *quickWindow = [[NSMenuItem alloc] initWithTitle:@"クイックウインドウを表示／隠す" action:@selector(toggleQuickWindow:) keyEquivalent:@""];
+    NSMenuItem *quickWindow = [[NSMenuItem alloc] initWithTitle:@"" action:@selector(toggleQuickWindow:) keyEquivalent:@""];
     quickWindow.target = self;
     [windowMenu addItem:quickWindow];
 
-    NSMenuItem *pin = [[NSMenuItem alloc] initWithTitle:@"クイックウインドウを固定" action:@selector(togglePin:) keyEquivalent:@""];
+    NSMenuItem *pin = [[NSMenuItem alloc] initWithTitle:@"" action:@selector(togglePin:) keyEquivalent:@""];
     pin.target = self;
     [windowMenu addItem:pin];
+    _dualItem = dual;
+    _quickWindowItem = quickWindow;
+    _pinItem = pin;
+    [self updateMenuTitles];
+}
+
+// 言語の設定に合わせて、足したメニュー項目の名前を付け直す
+- (void)updateMenuTitles {
+    _dualItem.title = TWFText(@"デュアル表示", @"Dual View");
+    _quickWindowItem.title = TWFText(@"クイックウインドウを表示／隠す", @"Show/Hide Quick Window");
+    _pinItem.title = TWFText(@"クイックウインドウを固定", @"Pin Quick Window");
 }
 
 - (void)toggleDual:(id)sender {

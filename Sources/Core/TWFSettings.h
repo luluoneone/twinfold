@@ -9,6 +9,8 @@
 - (instancetype)initWithPrefs:(NSUserDefaults *)prefs quickWindow:(TWFQuickWindow *)quickWindow;
 // Finder 設定を開いて Twinfold のタブを選ぶ
 - (void)openPane;
+// 言語を変えたあと、開いている設定画面を作り直す
+- (void)reloadLanguage;
 @end
 
 // dylib と同じ場所（Twinfold.app/Contents/Resources）にあるファイル
