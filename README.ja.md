@@ -208,4 +208,5 @@ macOS 26.6.2：
 
 ## ライセンス
 
-MIT License（[LICENSE](LICENSE)）。
+無料で使えます。MIT License、© 2026 LULU Apps（[LICENSE](LICENSE)）。
+複製や再配布をするときは、著作権表示とライセンスの文章を残してください。
